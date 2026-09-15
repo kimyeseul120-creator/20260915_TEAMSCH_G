@@ -192,7 +192,7 @@ def generate_summary(meeting_id):
     )
 
     client = Groq(api_key=api_key)
-    model = os.environ.get("SUMMARY_MODEL", "llama-3.3-70b-versatile")
+    model = os.environ.get("SUMMARY_MODEL", "llama-3.1-8b-instant")
 
     try:
         resp = client.chat.completions.create(
@@ -205,7 +205,13 @@ def generate_summary(meeting_id):
         )
         body = (resp.choices[0].message.content or "").strip()
     except Exception as exc:  # noqa: BLE001 - 외부 API 호출 실패를 사용자 메시지로 변환
-        raise SummarizeError(f"요약 생성 중 오류가 발생했습니다: {exc}") from exc
+        hint = ""
+        if "model_not_found" in str(exc) or "does not exist" in str(exc):
+            hint = (
+                " (모델을 찾을 수 없습니다. console.groq.com/docs/models 에서 사용 가능한 "
+                "모델명을 확인해 SUMMARY_MODEL 환경변수에 설정해보세요.)"
+            )
+        raise SummarizeError(f"요약 생성 중 오류가 발생했습니다: {exc}{hint}") from exc
 
     participants = meeting.participant_names()
     participants_line = "참여자: " + (", ".join(participants) if participants else "-")
