@@ -126,10 +126,10 @@
 
 <div class="card">
     <h2>사용자 생성</h2>
+    <p class="card-sub">사용자코드는 부서/권한에 맞춰 자동으로 생성됩니다 (예: 개발팀 조직원 → DEV001). 생성 후 화면에 표시되는 코드를 본인에게 전달해주세요.</p>
     <form method="post" action="{{ url_for('admin.create_user') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-row">
-            <label>사용자코드 <input type="text" name="user_code" placeholder="DEV001" required></label>
             <label>이름 <input type="text" name="name" required></label>
             <label>부서
                 <select name="department_id">

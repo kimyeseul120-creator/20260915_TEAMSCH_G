@@ -44,8 +44,7 @@ def users_page():
 def create_user():
     form = request.form
     try:
-        user_service.create_user(
-            user_code=form.get("user_code", ""),
+        new_user = user_service.create_user(
             name=form.get("name", ""),
             department_id=form.get("department_id", type=int),
             position=form.get("position") or None,
@@ -54,7 +53,7 @@ def create_user():
             role=form.get("role", "member"),
             is_active=form.get("is_active") == "on",
         )
-        flash("사용자를 생성했습니다.")
+        flash(f"사용자를 생성했습니다. 사용자코드: {new_user.user_code} (본인에게 전달해주세요)")
     except UserServiceError as e:
         flash(str(e))
     return redirect(url_for("admin.users_page"))
