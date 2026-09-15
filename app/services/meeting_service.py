@@ -192,7 +192,7 @@ def generate_summary(meeting_id):
     )
 
     client = Groq(api_key=api_key)
-    model = os.environ.get("SUMMARY_MODEL", "llama-3.1-8b-instant")
+    model = os.environ.get("SUMMARY_MODEL", "openai/gpt-oss-20b")
 
     try:
         resp = client.chat.completions.create(
