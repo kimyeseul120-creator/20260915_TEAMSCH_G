@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from flask import Flask
+from flask import Flask, request
 
 from app.config import Config
 from app.extensions import db, csrf
@@ -29,6 +29,20 @@ def create_app(config_class=Config):
     app.register_blueprint(task.bp)
     app.register_blueprint(memo.bp)
     app.register_blueprint(meeting.bp)
+
+    @app.after_request
+    def _disable_caching_for_dynamic_pages(response):
+        """
+        Vercel은 기본적으로 응답에 "Cache-Control: public, max-age=0, must-revalidate"를
+        붙이는데, 이 페이지들은 로그인 세션·CSRF 토큰처럼 사용자마다 달라야 하는 값을
+        담고 있어 캐시되면 안 된다. 정적 파일(/static/...)은 그대로 두고, 나머지 응답에는
+        캐시하지 말라는 헤더를 명시적으로 덮어써서 "CSRF tokens do not match" 같은
+        오류(캐시된 옛 페이지를 여러 사용자가 같이 받는 문제)를 방지한다.
+        """
+        if not request.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+        return response
 
     with app.app_context():
         db.create_all()
