@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Team Schedule{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>내 현재 상태</h2>
+    <p class="card-sub">지금 상태를 선택하면 팀원 현황과 대시보드에 바로 반영됩니다.</p>
+    <form method="post" action="{{ url_for('work_status.update') }}" class="tag-row">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% set current = request.current_user.work_status.status if request.current_user.work_status else 'working' %}
+        {% for key, label in [('working','🟢 근무중'), ('remote','🔵 재택근무'), ('outside','🟡 외근'), ('business_trip','🟣 출장'), ('vacation','🔴 휴가'), ('etc','🟠 기타')] %}
+        <button type="submit" name="status" value="{{ key }}" class="{{ 'active' if current == key }}">{{ label }}</button>
+        {% endfor %}
+    </form>
+</div>
+
+<div class="card">
+    <h2>전체 팀원 대시보드</h2>
+    <p class="card-sub">모든 로그인 사용자에게 공개되는 실시간 현황입니다. {{ refresh_interval // 1000 }}초마다 자동 갱신됩니다.</p>
+    <div class="grid-stats" id="summary-tiles">
+        <div class="stat-tile"><div class="num" id="s-total">-</div><div class="label">전체 팀원</div></div>
+        <div class="stat-tile"><div class="num" id="s-working">-</div><div class="label">🟢 근무중</div></div>
+        <div class="stat-tile"><div class="num" id="s-remote">-</div><div class="label">🔵 재택근무</div></div>
+        <div class="stat-tile"><div class="num" id="s-outside">-</div><div class="label">🟡 외근</div></div>
+        <div class="stat-tile"><div class="num" id="s-trip">-</div><div class="label">🟣 출장</div></div>
+        <div class="stat-tile"><div class="num" id="s-vacation">-</div><div class="label">🔴 휴가</div></div>
+        <div class="stat-tile"><div class="num" id="s-meetings">-</div><div class="label">오늘 미팅</div></div>
+        <div class="stat-tile"><div class="num" id="s-leaves">-</div><div class="label">오늘 휴무</div></div>
+        <div class="stat-tile"><div class="num" id="s-tasks">-</div><div class="label">진행 업무</div></div>
+    </div>
+</div>
+
+<div class="card" id="team-status">
+    <h2>팀원 현황</h2>
+    <p class="card-sub">이름 · 부서 · 일정 · 업무를 검색/필터할 수 있습니다.</p>
+
+    <div class="form-row">
+        <label>이름 검색
+            <input type="text" id="f-keyword" placeholder="이름으로 검색">
+        </label>
+        <label>부서
+            <select id="f-department">
+                <option value="">전체</option>
+                {% for d in departments %}
+                <option value="{{ d.id }}">{{ d.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>현재 상태
+            <select id="f-status">
+                <option value="">전체</option>
+                <option value="working">🟢 근무중</option>
+                <option value="remote">🔵 재택근무</option>
+                <option value="outside">🟡 외근</option>
+                <option value="business_trip">🟣 출장</option>
+                <option value="vacation">🔴 휴가</option>
+                <option value="etc">🟠 기타</option>
+            </select>
+        </label>
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>이름</th><th>부서</th><th>현재 상태</th><th>오늘 일정</th><th>진행 업무</th></tr>
+        </thead>
+        <tbody id="team-status-body">
+            <tr><td colspan="5" class="empty">불러오는 중...</td></tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const REFRESH_INTERVAL = {{ refresh_interval }};
+const STATUS_LABEL = {
+    working: "🟢 근무중", remote: "🔵 재택근무", outside: "🟡 외근",
+    business_trip: "🟣 출장", vacation: "🔴 휴가", etc: "🟠 기타"
+};
+
+async function loadSummary() {
+    const res = await fetch("/api/dashboard/summary");
+    if (!res.ok) return;
+    const d = await res.json();
+    document.getElementById("s-total").textContent = d.total_members;
+    document.getElementById("s-working").textContent = d.working;
+    document.getElementById("s-remote").textContent = d.remote;
+    document.getElementById("s-outside").textContent = d.outside;
+    document.getElementById("s-trip").textContent = d.business_trip;
+    document.getElementById("s-vacation").textContent = d.vacation;
+    document.getElementById("s-meetings").textContent = d.today_meetings;
+    document.getElementById("s-leaves").textContent = d.today_leaves;
+    document.getElementById("s-tasks").textContent = d.ongoing_tasks;
+}
+
+async function loadTeamStatus() {
+    const params = new URLSearchParams();
+    const kw = document.getElementById("f-keyword").value.trim();
+    const dep = document.getElementById("f-department").value;
+    const status = document.getElementById("f-status").value;
+    if (kw) params.set("q", kw);
+    if (dep) params.set("department_id", dep);
+    if (status) params.set("status", status);
+
+    const res = await fetch("/api/dashboard/team-status?" + params.toString());
+    if (!res.ok) return;
+    const d = await res.json();
+    const body = document.getElementById("team-status-body");
+    if (!d.rows.length) {
+        body.innerHTML = '<tr><td colspan="5" class="empty">조건에 맞는 팀원이 없습니다.</td></tr>';
+        return;
+    }
+    body.innerHTML = d.rows.map(r => `
+        <tr>
+            <td><a href="/members/${r.id}">${r.name}</a></td>
+            <td>${r.department}</td>
+            <td><span class="badge badge-${r.status}">${r.status_label}</span></td>
+            <td>${r.today_schedule ? r.today_schedule : '-'}</td>
+            <td>${r.task_progress !== null ? (r.task_title + " · " + r.task_progress + "%") : '-'}</td>
+        </tr>
+    `).join("");
+}
+
+function refreshAll() {
+    loadSummary();
+    loadTeamStatus();
+}
+
+document.getElementById("f-keyword").addEventListener("input", () => loadTeamStatus());
+document.getElementById("f-department").addEventListener("change", () => loadTeamStatus());
+document.getElementById("f-status").addEventListener("change", () => loadTeamStatus());
+
+refreshAll();
+setInterval(refreshAll, REFRESH_INTERVAL);
+</script>
+{% endblock %}

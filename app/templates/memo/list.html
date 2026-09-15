@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}내 메모 - Team Schedule{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>내 메모</h2>
+    <p class="card-sub">이 메모는 본인만 볼 수 있습니다. 관리자를 포함해 다른 누구도 조회할 수 없습니다.</p>
+
+    <form method="get" class="form-row">
+        <label>검색 <input type="text" name="q" value="{{ keyword }}"></label>
+        <label style="justify-content:flex-end;"><button class="btn btn-sm" type="submit">검색</button></label>
+    </form>
+
+    {% for m in memos %}
+    <div class="card" style="background:#fafbfd;">
+        <details {{ 'open' if loop.first }}>
+            <summary style="cursor:pointer; font-weight:600;">{{ m.title }}
+                <span style="font-weight:400; color:var(--muted); font-size:12px;">
+                    ({{ m.updated_at.strftime('%Y-%m-%d %H:%M') }})
+                </span>
+            </summary>
+            <form method="post" action="{{ url_for('memo.update', memo_id=m.id) }}" style="margin-top:10px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-row">
+                    <label>제목 <input type="text" name="title" value="{{ m.title }}"></label>
+                </div>
+                <div class="form-row">
+                    <label>내용 <textarea name="content" rows="4">{{ m.content }}</textarea></label>
+                </div>
+                <button class="btn btn-sm" type="submit">저장</button>
+            </form>
+            <form method="post" action="{{ url_for('memo.delete', memo_id=m.id) }}" style="margin-top:6px;"
+                  onsubmit="return confirm('삭제하시겠습니까?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-danger" type="submit">삭제</button>
+            </form>
+        </details>
+    </div>
+    {% else %}
+    <p class="empty">작성한 메모가 없습니다.</p>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <h2>새 메모 작성</h2>
+    <form method="post" action="{{ url_for('memo.create') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+            <label>제목 <input type="text" name="title" required></label>
+        </div>
+        <div class="form-row">
+            <label>내용 <textarea name="content" rows="4"></textarea></label>
+        </div>
+        <button class="btn" type="submit">메모 저장</button>
+    </form>
+</div>
+{% endblock %}

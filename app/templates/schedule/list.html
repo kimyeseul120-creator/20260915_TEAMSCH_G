@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}일정 - Team Schedule{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="cal-header">
+        <div class="tag-row" style="margin:0;">
+            <a class="{{ 'active' if view == 'team' }}" href="{{ url_for('schedule.page', year=year, month=month, view='team') }}">전체 일정</a>
+            <a class="{{ 'active' if view == 'mine' }}" href="{{ url_for('schedule.page', year=year, month=month, view='mine') }}">내 일정</a>
+        </div>
+        <div>
+            <a href="{{ url_for('schedule.page', year=prev_year, month=prev_month, view=view) }}">◀ 이전달</a>
+            &nbsp;<strong>{{ year }}년 {{ month }}월</strong>&nbsp;
+            <a href="{{ url_for('schedule.page', year=next_year, month=next_month, view=view) }}">다음달 ▶</a>
+        </div>
+    </div>
+
+    <div class="cal-grid">
+        {% for dow in ['일','월','화','수','목','금','토'] %}
+        <div class="cal-dow">{{ dow }}</div>
+        {% endfor %}
+        {% for week in weeks %}
+            {% for day in week %}
+            <div class="cal-cell {{ 'other-month' if day.month != month }} {{ 'today' if day == today }}">
+                <div class="cal-daynum">{{ day.day }}</div>
+                {% for s in by_day.get(day, []) %}
+                <div class="cal-event" title="{{ s.title }}">{{ s.title }}</div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card">
+    <h2>이번달 일정 목록</h2>
+    <table>
+        <thead><tr><th>날짜</th><th>제목</th><th>유형</th><th>등록자</th><th></th></tr></thead>
+        <tbody>
+        {% set all_events = by_day.values() | sum(start=[]) %}
+        {% for s in all_events | sort(attribute='start_datetime') %}
+            <tr>
+                <td>{{ s.start_datetime.strftime('%m/%d %H:%M') }}</td>
+                <td>{{ s.title }}</td>
+                <td>{{ schedule_types.get(s.schedule_type, s.schedule_type) }}</td>
+                <td>{{ s.creator.name if s.creator else '-' }}</td>
+                <td>
+                    {% if request.current_user and s.created_by == request.current_user.id %}
+                    <form method="post" action="{{ url_for('schedule.delete', schedule_id=s.id) }}" onsubmit="return confirm('삭제하시겠습니까?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-danger" type="submit">삭제</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="5" class="empty">이번달 일정이 없습니다.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>일정 등록</h2>
+    <form method="post" action="{{ url_for('schedule.create') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="ref_year" value="{{ year }}">
+        <input type="hidden" name="ref_month" value="{{ month }}">
+        <div class="form-row">
+            <label>제목 <input type="text" name="title" required></label>
+            <label>유형
+                <select name="schedule_type">
+                    {% for key, label in schedule_types.items() %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <div class="form-row">
+            <label>시작 <input type="datetime-local" name="start_datetime" required></label>
+            <label>종료 <input type="datetime-local" name="end_datetime" required></label>
+        </div>
+        <div class="form-row">
+            <label>장소 <input type="text" name="location"></label>
+            <label>온라인 미팅 URL <input type="text" name="meeting_url"></label>
+        </div>
+        <div class="form-row">
+            <label>설명 <textarea name="description" rows="2"></textarea></label>
+        </div>
+        <div class="form-row">
+            <label>참석자 (미팅인 경우 선택)
+                <select name="participant_ids" multiple size="4">
+                    {% for u in users %}
+                    <option value="{{ u.id }}">{{ u.name }} ({{ u.department.name if u.department else '-' }})</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <button class="btn" type="submit">일정 등록</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>휴무 등록</h2>
+    <p class="card-sub">등록한 휴무는 팀원 현황·대시보드에 반영됩니다.</p>
+    <form method="post" action="{{ url_for('leave.create') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+            <label>휴무 유형
+                <select name="leave_type">
+                    <option value="annual">연차</option>
+                    <option value="half_day">반차</option>
+                    <option value="sick">병가</option>
+                    <option value="official">공가</option>
+                    <option value="etc">기타</option>
+                </select>
+            </label>
+            <label>시작일 <input type="date" name="start_date" required></label>
+            <label>종료일 <input type="date" name="end_date" required></label>
+        </div>
+        <div class="form-row">
+            <label>사유 <input type="text" name="reason"></label>
+        </div>
+        <button class="btn btn-secondary" type="submit">휴무 등록</button>
+    </form>
+</div>
+{% endblock %}

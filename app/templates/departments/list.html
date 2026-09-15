@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}부서 관리 - Team Schedule{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>부서 관리</h2>
+    <table>
+        <thead><tr><th>부서명</th><th>설명</th><th>소속 인원</th><th>상태</th><th>관리</th></tr></thead>
+        <tbody>
+        {% for d in departments %}
+            <tr>
+                <td>{{ d.name }}</td>
+                <td>{{ d.description or '-' }}</td>
+                <td>{{ d.users|length }}명</td>
+                <td>{{ '활성' if d.is_active else '비활성' }}</td>
+                <td style="display:flex; gap:6px;">
+                    <form method="post" action="{{ url_for('admin.update_department', dept_id=d.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="{{ 'deactivate' if d.is_active else 'activate' }}">
+                        <button class="btn btn-sm btn-secondary" type="submit">{{ '비활성화' if d.is_active else '활성화' }}</button>
+                    </form>
+                    <form method="post" action="{{ url_for('admin.update_department', dept_id=d.id) }}"
+                          onsubmit="return confirm('삭제하시겠습니까? 소속 인원이 있으면 삭제할 수 없습니다.');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="delete">
+                        <button class="btn btn-sm btn-danger" type="submit">삭제</button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="5" class="empty">등록된 부서가 없습니다.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>부서 생성</h2>
+    <form method="post" action="{{ url_for('admin.create_department') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+            <label>부서명 <input type="text" name="name" required></label>
+            <label>설명 <input type="text" name="description"></label>
+        </div>
+        <button class="btn" type="submit">부서 생성</button>
+    </form>
+</div>
+{% endblock %}

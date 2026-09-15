@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}사용자 관리 - Team Schedule{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>사용자 관리</h2>
+    <p class="card-sub">사용자코드는 고유해야 합니다. 삭제보다는 비활성화를 권장합니다.</p>
+
+    <form method="get" class="form-row">
+        <label>검색 (코드/이름)
+            <input type="text" name="q" value="{{ keyword }}">
+        </label>
+        <label>부서
+            <select name="department_id">
+                <option value="">전체</option>
+                {% for d in departments %}
+                <option value="{{ d.id }}" {{ 'selected' if selected_department == d.id }}>{{ d.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>권한
+            <select name="role">
+                <option value="">전체</option>
+                <option value="member" {{ 'selected' if selected_role == 'member' }}>조직원</option>
+                <option value="admin" {{ 'selected' if selected_role == 'admin' }}>관리자</option>
+            </select>
+        </label>
+        <label>상태
+            <select name="status">
+                <option value="">전체</option>
+                <option value="active" {{ 'selected' if selected_status == 'active' }}>활성</option>
+                <option value="inactive" {{ 'selected' if selected_status == 'inactive' }}>비활성</option>
+            </select>
+        </label>
+        <label style="justify-content:flex-end;"><button class="btn btn-sm" type="submit">검색</button></label>
+    </form>
+
+    <table>
+        <thead>
+            <tr><th>코드</th><th>이름</th><th>부서</th><th>직급</th><th>권한</th><th>상태</th><th>관리</th></tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+            <tr>
+                <td><code>{{ u.user_code }}</code></td>
+                <td>{{ u.name }}</td>
+                <td>{{ u.department.name if u.department else '-' }}</td>
+                <td>{{ u.position or '-' }}</td>
+                <td>{{ '관리자' if u.is_admin else '조직원' }}</td>
+                <td>{{ '활성' if u.is_active else '비활성' }}</td>
+                <td>
+                    <details>
+                    <summary class="btn btn-sm btn-secondary" style="display:inline-block; cursor:pointer;">수정</summary>
+                    <div style="margin-top:8px; display:flex; flex-direction:column; gap:8px; min-width:220px;">
+
+                        <form method="post" action="{{ url_for('admin.update_user', user_id=u.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="update">
+                            <div class="form-row">
+                                <label>이름 <input type="text" name="name" value="{{ u.name }}"></label>
+                                <label>직급 <input type="text" name="position" value="{{ u.position or '' }}"></label>
+                            </div>
+                            <div class="form-row">
+                                <label>이메일 <input type="email" name="email" value="{{ u.email or '' }}"></label>
+                                <label>전화번호 <input type="tel" name="phone" value="{{ u.phone or '' }}"></label>
+                            </div>
+                            <div class="form-row">
+                                <label>부서
+                                    <select name="department_id">
+                                        <option value="">미지정</option>
+                                        {% for d in departments %}
+                                        <option value="{{ d.id }}" {{ 'selected' if u.department_id == d.id }}>{{ d.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                            </div>
+                            <button class="btn btn-sm" type="submit">정보 저장</button>
+                        </form>
+
+                        <form method="post" action="{{ url_for('admin.update_user', user_id=u.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="change_code">
+                            <div class="form-row">
+                                <label>사용자코드 변경 <input type="text" name="user_code" value="{{ u.user_code }}"></label>
+                            </div>
+                            <button class="btn btn-sm btn-secondary" type="submit">코드 변경</button>
+                        </form>
+
+                        <form method="post" action="{{ url_for('admin.update_user', user_id=u.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="set_role">
+                            <div class="form-row">
+                                <label>권한
+                                    <select name="role">
+                                        <option value="member" {{ 'selected' if u.role == 'member' }}>조직원</option>
+                                        <option value="admin" {{ 'selected' if u.role == 'admin' }}>관리자</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <button class="btn btn-sm btn-secondary" type="submit">권한 변경</button>
+                        </form>
+
+                        <div style="display:flex; gap:6px;">
+                            <form method="post" action="{{ url_for('admin.update_user', user_id=u.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="action" value="{{ 'deactivate' if u.is_active else 'activate' }}">
+                                <button class="btn btn-sm btn-secondary" type="submit">{{ '비활성화' if u.is_active else '활성화' }}</button>
+                            </form>
+                            <form method="post" action="{{ url_for('admin.update_user', user_id=u.id) }}"
+                                  onsubmit="return confirm('정말 삭제하시겠습니까? 비활성화를 먼저 고려해보세요.');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="action" value="delete">
+                                <button class="btn btn-sm btn-danger" type="submit">삭제</button>
+                            </form>
+                        </div>
+                    </div>
+                    </details>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="7" class="empty">등록된 사용자가 없습니다.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>사용자 생성</h2>
+    <form method="post" action="{{ url_for('admin.create_user') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+            <label>사용자코드 <input type="text" name="user_code" placeholder="DEV001" required></label>
+            <label>이름 <input type="text" name="name" required></label>
+            <label>부서
+                <select name="department_id">
+                    <option value="">미지정</option>
+                    {% for d in departments %}
+                    <option value="{{ d.id }}">{{ d.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <div class="form-row">
+            <label>직급 <input type="text" name="position"></label>
+            <label>이메일 <input type="email" name="email"></label>
+            <label>전화번호 <input type="tel" name="phone"></label>
+        </div>
+        <div class="form-row">
+            <label>권한
+                <select name="role">
+                    <option value="member">조직원</option>
+                    <option value="admin">관리자</option>
+                </select>
+            </label>
+            <label style="flex-direction:row; align-items:center; gap:6px;">
+                <input type="checkbox" name="is_active" checked style="width:auto;"> 활성 상태로 생성
+            </label>
+        </div>
+        <button class="btn" type="submit">사용자 생성</button>
+    </form>
+</div>
+{% endblock %}

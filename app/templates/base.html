@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Team Schedule{% endblock %}</title>
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+{% set user = request.current_user if request and request.current_user else None %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <span class="brand-mark">◆</span>
+            <div>
+                <div class="brand-title">Team Schedule</div>
+                <div class="brand-sub">팀원 일정 공유 시스템</div>
+            </div>
+        </div>
+
+        <nav class="nav">
+            <a href="{{ url_for('dashboard.index') }}" class="{{ 'active' if request.endpoint == 'dashboard.index' }}">Dashboard</a>
+            <a href="{{ url_for('dashboard.index') }}#team-status">팀원 현황</a>
+            <a href="{{ url_for('schedule.page') }}" class="{{ 'active' if request.endpoint == 'schedule.page' }}">전체 일정 / 내 일정</a>
+            <a href="{{ url_for('task.page') }}" class="{{ 'active' if request.endpoint == 'task.page' }}">진행 업무 / 팀원 업무</a>
+            <a href="{{ url_for('memo.page') }}" class="{{ 'active' if request.endpoint == 'memo.page' }}">내 메모</a>
+            {% if user and user.is_admin %}
+            <div class="nav-divider"></div>
+            <a href="{{ url_for('admin.users_page') }}" class="{{ 'active' if request.endpoint == 'admin.users_page' }}">사용자 관리</a>
+            <a href="{{ url_for('admin.departments_page') }}" class="{{ 'active' if request.endpoint == 'admin.departments_page' }}">부서 관리</a>
+            {% endif %}
+        </nav>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div></div>
+            {% if user %}
+            <div class="who">
+                <span class="who-name">{{ user.name }}</span>
+                <span class="who-code">{{ user.user_code }}</span>
+                <span class="who-role role-{{ user.role }}">{{ '관리자' if user.is_admin else '조직원' }}</span>
+                <form action="{{ url_for('auth.logout') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-ghost">로그아웃</button>
+                </form>
+            </div>
+            {% endif %}
+        </header>
+
+        <main class="content">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <div class="flash">
+                    {% for message in messages %}
+                    <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

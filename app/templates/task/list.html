@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}업무 - Team Schedule{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="tag-row">
+        <a class="{{ 'active' if view == 'mine' }}" href="{{ url_for('task.page', view='mine') }}">내 진행 업무</a>
+        <a class="{{ 'active' if view == 'team' }}" href="{{ url_for('task.page', view='team') }}">팀원 업무</a>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>{{ '이름' if view == 'team' else '업무명' }}</th>
+                {% if view == 'team' %}<th>업무명</th>{% endif %}
+                <th>프로젝트</th><th>상태</th><th>진행률</th><th>마감일</th>
+                {% if view == 'mine' %}<th>관리</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for t in tasks %}
+            <tr>
+                <td>{{ t.user.name if view == 'team' else t.title }}</td>
+                {% if view == 'team' %}<td>{{ t.title }}</td>{% endif %}
+                <td>{{ t.project_name or '-' }}</td>
+                <td>{{ task_statuses.get(t.status, t.status) }}</td>
+                <td style="min-width:120px;">
+                    <div class="progress"><span style="width:{{ t.progress }}%;"></span></div>
+                    <span style="font-size:11px; color:var(--muted);">{{ t.progress }}%</span>
+                </td>
+                <td>{{ t.due_date or '-' }}</td>
+                {% if view == 'mine' %}
+                <td>
+                    <details>
+                        <summary class="btn btn-sm btn-secondary" style="display:inline-block; cursor:pointer;">수정</summary>
+                        <form method="post" action="{{ url_for('task.update', task_id=t.id) }}" style="margin-top:8px;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="form-row">
+                                <label>상태
+                                    <select name="status">
+                                        {% for key, label in task_statuses.items() %}
+                                        <option value="{{ key }}" {{ 'selected' if t.status == key }}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <label>진행률(%) <input type="number" name="progress" min="0" max="100" value="{{ t.progress }}"></label>
+                            </div>
+                            <button class="btn btn-sm" type="submit">저장</button>
+                        </form>
+                        <form method="post" action="{{ url_for('task.delete', task_id=t.id) }}" style="margin-top:6px;"
+                              onsubmit="return confirm('삭제하시겠습니까?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-danger" type="submit">삭제</button>
+                        </form>
+                    </details>
+                </td>
+                {% endif %}
+            </tr>
+        {% else %}
+            <tr><td colspan="6" class="empty">등록된 업무가 없습니다.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if view == 'mine' %}
+<div class="card">
+    <h2>업무 등록</h2>
+    <form method="post" action="{{ url_for('task.create') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+            <label>업무명 <input type="text" name="title" required></label>
+            <label>프로젝트 <input type="text" name="project_name"></label>
+        </div>
+        <div class="form-row">
+            <label>상태
+                <select name="status">
+                    {% for key, label in task_statuses.items() %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>진행률(%) <input type="number" name="progress" min="0" max="100" value="0"></label>
+            <label>우선순위
+                <select name="priority">
+                    <option value="low">낮음</option>
+                    <option value="normal" selected>보통</option>
+                    <option value="high">높음</option>
+                </select>
+            </label>
+        </div>
+        <div class="form-row">
+            <label>시작일 <input type="date" name="start_date"></label>
+            <label>예상 완료일 <input type="date" name="due_date"></label>
+        </div>
+        <div class="form-row">
+            <label>설명 <textarea name="description" rows="2"></textarea></label>
+        </div>
+        <button class="btn" type="submit">업무 등록</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

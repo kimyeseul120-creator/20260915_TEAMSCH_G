@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ member.name }} - Team Schedule{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>{{ member.name }}</h2>
+    <p class="card-sub">{{ member.department.name if member.department else '부서 미지정' }} / {{ member.position or '-' }}</p>
+
+    <div class="form-row">
+        <div><strong>현재 상태</strong><br>{{ status_label }}</div>
+    </div>
+
+    <h3 style="font-size:14px; margin-top:20px;">오늘 일정</h3>
+    {% if today_schedules %}
+    <ul>
+        {% for s in today_schedules %}
+        <li>{{ s.start_datetime.strftime('%H:%M') }} {{ s.title }}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">오늘 등록된 일정이 없습니다.</p>
+    {% endif %}
+
+    <h3 style="font-size:14px; margin-top:20px;">현재 진행 업무</h3>
+    {% if current_task %}
+    <p>{{ current_task.title }}</p>
+    <div class="progress"><span style="width:{{ current_task.progress }}%;"></span></div>
+    <p class="card-sub">진행률 {{ current_task.progress }}% · 예상 완료 {{ current_task.due_date or '-' }}</p>
+    {% else %}
+    <p class="empty">진행 중인 업무가 없습니다.</p>
+    {% endif %}
+
+    <p class="card-sub" style="margin-top:20px;">※ 개인 메모 등 본인 전용 정보는 이 화면에 표시되지 않습니다.</p>
+</div>
+{% endblock %}
