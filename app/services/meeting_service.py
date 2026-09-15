@@ -87,40 +87,47 @@ SUMMARY_SYSTEM_PROMPT = """당신은 회의록 정리 보조원입니다. 주어
 
 
 def generate_summary(meeting_id):
+    """
+    Groq API(무료 요금제, 신용카드 등록 불필요)로 채팅 내용을 요약한다.
+    console.groq.com에서 발급받은 GROQ_API_KEY 환경변수가 필요하다.
+    """
     meeting = OnlineMeeting.query.get(meeting_id)
     if not meeting:
         raise SummarizeError("회의를 찾을 수 없습니다.")
     if not meeting.messages:
         raise SummarizeError("정리할 채팅 내용이 없습니다.")
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise SummarizeError(
-            "ANTHROPIC_API_KEY가 설정되어 있지 않습니다. .env 파일(로컬) 또는 Vercel 환경변수에 추가해주세요."
+            "GROQ_API_KEY가 설정되어 있지 않습니다. console.groq.com에서 무료로 발급받아 "
+            ".env 파일(로컬) 또는 Vercel 환경변수에 추가해주세요."
         )
 
     try:
-        import anthropic
+        from groq import Groq
     except ImportError as exc:
         raise SummarizeError(
-            "anthropic 패키지가 설치되어 있지 않습니다. requirements.txt를 다시 설치해주세요."
+            "groq 패키지가 설치되어 있지 않습니다. requirements.txt를 다시 설치해주세요."
         ) from exc
 
     transcript = "\n".join(
         f"{m.user.name if m.user else '알수없음'}: {m.content}" for m in meeting.messages
     )
 
-    client = anthropic.Anthropic(api_key=api_key)
-    model = os.environ.get("SUMMARY_MODEL", "claude-sonnet-5")
+    client = Groq(api_key=api_key)
+    model = os.environ.get("SUMMARY_MODEL", "llama-3.3-70b-versatile")
 
     try:
-        resp = client.messages.create(
+        resp = client.chat.completions.create(
             model=model,
             max_tokens=1500,
-            system=SUMMARY_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"[회의 제목: {meeting.title}]\n\n{transcript}"}],
+            messages=[
+                {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
+                {"role": "user", "content": f"[회의 제목: {meeting.title}]\n\n{transcript}"},
+            ],
         )
-        body = "".join(block.text for block in resp.content if block.type == "text").strip()
+        body = (resp.choices[0].message.content or "").strip()
     except Exception as exc:  # noqa: BLE001 - 외부 API 호출 실패를 사용자 메시지로 변환
         raise SummarizeError(f"요약 생성 중 오류가 발생했습니다: {exc}") from exc
 
