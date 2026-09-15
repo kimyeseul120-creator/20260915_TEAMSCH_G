@@ -91,6 +91,39 @@ def add_message(meeting_id, user_id, content):
     return msg
 
 
+def import_from_meeting(target_meeting_id, source_meeting_id, user):
+    """
+    지난 회의(source)의 내용을 지금 진행 중인 회의(target)로 끌어와, 참고용 채팅
+    메시지로 남긴다. 정리된 요약이 있으면 요약을, 없으면 대화 원문을 가져온다.
+    두 회의 모두에 접근 권한(is_member)이 있는 경우에만 허용한다.
+    """
+    target = OnlineMeeting.query.get(target_meeting_id)
+    source = OnlineMeeting.query.get(source_meeting_id)
+    if not target or not source:
+        raise ValueError("회의를 찾을 수 없습니다.")
+    if target.id == source.id:
+        raise ValueError("같은 회의에서는 불러올 수 없습니다.")
+    if not target.is_member(user) or not source.is_member(user):
+        raise ValueError("접근 권한이 있는 회의만 불러올 수 있습니다.")
+    if target.is_closed:
+        raise ValueError("종료된 회의에는 내용을 가져올 수 없습니다.")
+
+    if source.summary:
+        body = source.summary
+    elif source.messages:
+        body = "\n".join(
+            f"{m.user.name if m.user else '알수없음'}: {m.content}" for m in source.messages
+        )
+    else:
+        raise ValueError("불러올 채팅 내용이나 정리된 요약이 없는 회의입니다.")
+
+    content = f"📋 [지난 회의 '{source.title}' 내용 가져옴]\n{body}"
+    msg = MeetingMessage(meeting_id=target_meeting_id, user_id=user.id, content=content)
+    db.session.add(msg)
+    db.session.commit()
+    return msg
+
+
 def messages_since(meeting_id, after_id=0):
     return (
         MeetingMessage.query.filter(

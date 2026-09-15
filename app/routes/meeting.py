@@ -51,12 +51,17 @@ def room(meeting_id):
         .all()
     )
     can_manage = request.current_user.is_admin or request.current_user.id == meeting.created_by
+    past_meetings = [
+        m for m in meeting_service.list_my_meetings(request.current_user)
+        if m.id != meeting.id and (m.summary or m.messages)
+    ]
     return render_template(
         "meeting/room.html",
         meeting=meeting,
         summary_lines=summary_lines,
         invitable_users=invitable_users,
         can_manage=can_manage,
+        past_meetings=past_meetings,
     )
 
 
@@ -102,6 +107,21 @@ def send_message(meeting_id):
         abort(404)
     try:
         meeting_service.add_message(meeting_id, request.current_user.id, request.form.get("content", ""))
+    except ValueError as e:
+        flash(str(e))
+    return redirect(url_for("meeting.room", meeting_id=meeting_id))
+
+
+@bp.route("/meetings/<int:meeting_id>/import", methods=["POST"])
+@login_required
+def import_content(meeting_id):
+    source_id = request.form.get("source_meeting_id", type=int)
+    if not source_id:
+        flash("가져올 지난 회의를 선택해주세요.")
+        return redirect(url_for("meeting.room", meeting_id=meeting_id))
+    try:
+        meeting_service.import_from_meeting(meeting_id, source_id, request.current_user)
+        flash("지난 회의 내용을 가져왔습니다.")
     except ValueError as e:
         flash(str(e))
     return redirect(url_for("meeting.room", meeting_id=meeting_id))

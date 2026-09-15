@@ -63,6 +63,7 @@ a { color: var(--brand); text-decoration: none; }
 }
 .nav a:hover { background: var(--fill-gray-hover); }
 .nav a.active { background: var(--sidebar-active); font-weight: 600; }
+.nav a.nav-bold { font-weight: 700; }
 .nav-divider { border-top: 1px solid var(--border); margin: 8px 0; }
 
 /* ---- 메인 ---- */

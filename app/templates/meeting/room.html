@@ -59,6 +59,21 @@
     </details>
     {% endif %}
 
+    {% if not meeting.is_closed and past_meetings %}
+    <form method="post" action="{{ url_for('meeting.import_content', meeting_id=meeting.id) }}" class="form-row" style="align-items:flex-end;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label style="flex:1;">지난 회의 내용 가져오기
+            <select name="source_meeting_id">
+                <option value="">불러올 회의 선택</option>
+                {% for pm in past_meetings %}
+                <option value="{{ pm.id }}">{{ pm.title }} ({{ pm.created_at.strftime('%Y-%m-%d') }}){{ ' · 정리됨' if pm.summary else '' }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label style="flex:none;"><button class="btn btn-sm btn-secondary" type="submit">가져오기</button></label>
+    </form>
+    {% endif %}
+
     <div id="chat-box" style="height:340px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; padding:12px; background:#fff;">
         {% for m in meeting.messages %}
         <div class="chat-msg" data-id="{{ m.id }}">
