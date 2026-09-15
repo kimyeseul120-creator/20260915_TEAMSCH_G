@@ -1,4 +1,3 @@
-import traceback
 from datetime import timedelta
 
 from flask import Flask
@@ -8,24 +7,6 @@ from app.extensions import db, csrf
 
 
 def create_app(config_class=Config):
-    try:
-        return _build_app(config_class)
-    except Exception:
-        # 서버리스 콜드스타트 등에서 앱 생성 자체가 실패하면 원인을 알 수 없으므로,
-        # 임시로 에러 내용을 그대로 보여주는 최소 앱을 반환한다.
-        # (run.py의 `app = create_app()`이 항상 top-level Flask 앱을 갖도록 이 구조를 유지)
-        tb = traceback.format_exc()
-        fallback = Flask(__name__)
-
-        @fallback.route("/", defaults={"path": ""})
-        @fallback.route("/<path:path>")
-        def _debug(path):
-            return f"<pre>{tb}</pre>", 500
-
-        return fallback
-
-
-def _build_app(config_class):
     app = Flask(__name__)
     app.config.from_object(config_class)
     app.permanent_session_lifetime = timedelta(
