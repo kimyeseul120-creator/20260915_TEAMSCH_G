@@ -1,8 +1,8 @@
 """
 온라인 회의(채팅) 서비스.
 
-참여자끼리 채팅으로 회의를 진행하고, 채팅 내용을 Claude API로 아래 계층 구조에
-맞춰 자동 정리한다.
+참여자끼리 채팅으로 회의를 진행하고, 채팅 내용을 Groq API로 아래 계층 구조에
+맞춰 자동 정리한다. 개설자는 특정 팀원을 회의에 초대할 수 있다.
 
 1. 대제목
 □ 소제목
@@ -14,23 +14,66 @@ import re
 from datetime import datetime
 
 from app.extensions import db
-from app.models import OnlineMeeting, MeetingMessage
+from app.models import OnlineMeeting, MeetingMessage, MeetingParticipant
 
 
 def list_meetings():
     return OnlineMeeting.query.order_by(OnlineMeeting.created_at.desc()).all()
 
 
+def list_my_meetings(user):
+    """내가 개설했거나 초대받은 회의 (관리자는 전체)."""
+    all_meetings = list_meetings()
+    if user and user.is_admin:
+        return all_meetings
+    return [m for m in all_meetings if m.is_member(user)]
+
+
 def get_meeting(meeting_id):
     return OnlineMeeting.query.get(meeting_id)
 
 
-def create_meeting(user_id, title):
+def create_meeting(user_id, title, participant_ids=None):
     title = (title or "").strip() or "제목 없는 회의"
     meeting = OnlineMeeting(title=title, created_by=user_id)
     db.session.add(meeting)
+    db.session.flush()  # meeting.id 확보
+
+    for uid in set(participant_ids or []):
+        if uid and uid != user_id:
+            db.session.add(
+                MeetingParticipant(meeting_id=meeting.id, user_id=uid, invited_by=user_id)
+            )
+
     db.session.commit()
     return meeting
+
+
+def invite_participants(meeting_id, user_ids, invited_by):
+    """이미 만들어진 회의에 참여자를 추가로 초대한다. 새로 추가된 인원 수를 반환."""
+    meeting = OnlineMeeting.query.get(meeting_id)
+    if not meeting:
+        raise ValueError("존재하지 않는 회의입니다.")
+
+    existing_ids = meeting.invited_user_ids()
+    added = 0
+    for uid in set(user_ids or []):
+        if uid and uid != meeting.created_by and uid not in existing_ids:
+            db.session.add(
+                MeetingParticipant(meeting_id=meeting_id, user_id=uid, invited_by=invited_by)
+            )
+            added += 1
+    db.session.commit()
+    return added
+
+
+def remove_participant(meeting_id, user_id):
+    row = MeetingParticipant.query.filter_by(meeting_id=meeting_id, user_id=user_id).first()
+    if not row:
+        return False
+    db.session.delete(row)
+    db.session.commit()
+    return True
 
 
 def add_message(meeting_id, user_id, content):

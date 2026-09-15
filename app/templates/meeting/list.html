@@ -6,6 +6,11 @@
     <h2>온라인 회의</h2>
     <p class="card-sub">참여자들과 채팅으로 회의하고, 끝나면 대화 내용을 자동으로 정리할 수 있습니다.</p>
 
+    <div class="tag-row">
+        <a class="{{ 'active' if view == 'mine' }}" href="{{ url_for('meeting.list_page', view='mine') }}">내 회의</a>
+        <a class="{{ 'active' if view == 'all' }}" href="{{ url_for('meeting.list_page', view='all') }}">전체 회의</a>
+    </div>
+
     <table>
         <thead><tr><th>제목</th><th>개설자</th><th>참여자</th><th>상태</th><th>정리</th><th></th></tr></thead>
         <tbody>
@@ -13,13 +18,13 @@
             <tr>
                 <td><a href="{{ url_for('meeting.room', meeting_id=m.id) }}">{{ m.title }}</a></td>
                 <td>{{ m.creator.name if m.creator else '-' }}</td>
-                <td>{{ m.participant_names() | join(', ') if m.messages else '-' }}</td>
+                <td>{{ m.participant_names() | join(', ') }}</td>
                 <td>{{ '종료' if m.is_closed else '진행중' }}</td>
                 <td>{{ '완료' if m.summary else '-' }}</td>
                 <td><a href="{{ url_for('meeting.room', meeting_id=m.id) }}" class="btn btn-sm btn-secondary">입장</a></td>
             </tr>
         {% else %}
-            <tr><td colspan="6" class="empty">아직 만들어진 온라인 회의가 없습니다.</td></tr>
+            <tr><td colspan="6" class="empty">{{ '초대받은 회의가 없습니다.' if view == 'mine' else '아직 만들어진 온라인 회의가 없습니다.' }}</td></tr>
         {% endfor %}
         </tbody>
     </table>
@@ -31,6 +36,15 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-row">
             <label>회의 제목 <input type="text" name="title" placeholder="예: 9월 3주차 주간회의" required></label>
+        </div>
+        <div class="form-row">
+            <label>참여자 초대 (선택)
+                <select name="participant_ids" multiple size="5">
+                    {% for u in users %}
+                    <option value="{{ u.id }}">{{ u.name }} ({{ u.department.name if u.department else '-' }})</option>
+                    {% endfor %}
+                </select>
+            </label>
         </div>
         <button class="btn" type="submit">회의 만들고 입장</button>
     </form>

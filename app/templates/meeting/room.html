@@ -22,7 +22,42 @@
         </div>
     </div>
 
-    <p class="card-sub" id="participant-line">참여자: {{ meeting.participant_names() | join(', ') if meeting.messages else '-' }}</p>
+    <p class="card-sub" id="participant-line">참여자: {{ meeting.participant_names() | join(', ') }}</p>
+
+    {% if can_manage %}
+    <details style="margin-bottom:14px;">
+        <summary class="btn btn-sm btn-secondary" style="display:inline-block; cursor:pointer;">참여자 초대/관리</summary>
+        <div style="margin-top:10px; display:flex; flex-direction:column; gap:10px;">
+            <form method="post" action="{{ url_for('meeting.invite', meeting_id=meeting.id) }}" class="form-row">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label style="flex:1;">초대할 팀원
+                    <select name="invite_ids" multiple size="4">
+                        {% for u in invitable_users %}
+                        <option value="{{ u.id }}">{{ u.name }} ({{ u.department.name if u.department else '-' }})</option>
+                        {% else %}
+                        <option disabled>초대할 수 있는 팀원이 없습니다</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label style="justify-content:flex-end;"><button class="btn btn-sm" type="submit">초대하기</button></label>
+            </form>
+
+            {% if meeting.invited %}
+            <div>
+                <span class="card-sub">초대된 팀원</span>
+                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
+                    {% for p in meeting.invited %}
+                    <form method="post" action="{{ url_for('meeting.remove_participant', meeting_id=meeting.id, user_id=p.user_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn-ghost" type="submit" title="초대 취소">{{ p.user.name if p.user else '알수없음' }} ✕</button>
+                    </form>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </details>
+    {% endif %}
 
     <div id="chat-box" style="height:340px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; padding:12px; background:#fff;">
         {% for m in meeting.messages %}
