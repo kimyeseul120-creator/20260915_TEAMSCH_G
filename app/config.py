@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 
 try:
@@ -60,3 +61,11 @@ class Config:
     LOGIN_RATE_LIMIT_WINDOW_SECONDS = _int_env("LOGIN_RATE_LIMIT_WINDOW_SECONDS", 300)
 
     WTF_CSRF_TIME_LIMIT = None
+
+    # 정적 파일(CSS 등) 캐시 무효화용 값. 배포마다 Vercel이 자동으로 채워주는 커밋 SHA를
+    # 사용해서, 내용이 바뀌었는데도 브라우저가 예전 CSS를 계속 쓰는 문제를 방지한다.
+    BUILD_ID = (
+        os.environ.get("VERCEL_GIT_COMMIT_SHA")
+        or os.environ.get("VERCEL_DEPLOYMENT_ID")
+        or str(int(time.time()))  # 로컬 실행 시에는 서버를 새로 띄울 때마다 값이 바뀜
+    )
