@@ -3,14 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>로그인 - Team Schedule</title>
+<title>로그인 - TeamBoard</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 <div class="login-page">
     <div class="login-card">
-        <h1>Team Schedule</h1>
-        <p class="login-sub">팀원 일정 공유 시스템</p>
+        <h1>TeamBoard</h1>
 
         {% with messages = get_flashed_messages() %}
             {% if messages %}

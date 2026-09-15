@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}Team Schedule{% endblock %}</title>
+<title>{% block title %}TeamBoard{% endblock %}</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -14,8 +14,7 @@
         <div class="brand">
             <span class="brand-mark">◆</span>
             <div>
-                <div class="brand-title">Team Schedule</div>
-                <div class="brand-sub">팀원 일정 공유 시스템</div>
+                <div class="brand-title">TeamBoard</div>
             </div>
         </div>
 
