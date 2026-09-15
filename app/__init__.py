@@ -16,7 +16,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     csrf.init_app(app)
 
-    from app.routes import auth, dashboard, user, admin, department, schedule, work_status, leave, task, memo
+    from app.routes import auth, dashboard, user, admin, department, schedule, work_status, leave, task, memo, meeting
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
@@ -28,6 +28,7 @@ def create_app(config_class=Config):
     app.register_blueprint(leave.bp)
     app.register_blueprint(task.bp)
     app.register_blueprint(memo.bp)
+    app.register_blueprint(meeting.bp)
 
     with app.app_context():
         db.create_all()

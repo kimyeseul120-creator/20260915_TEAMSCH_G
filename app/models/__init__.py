@@ -6,6 +6,7 @@ from .work_status import WorkStatus, STATUS_CHOICES
 from .leave import Leave, LEAVE_TYPES
 from .task import Task, TASK_STATUSES
 from .memo import Memo
+from .online_meeting import OnlineMeeting, MeetingMessage
 
 __all__ = [
     "User", "Department",
@@ -15,4 +16,5 @@ __all__ = [
     "Leave", "LEAVE_TYPES",
     "Task", "TASK_STATUSES",
     "Memo",
+    "OnlineMeeting", "MeetingMessage",
 ]

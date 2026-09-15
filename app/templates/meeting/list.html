@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}온라인 회의 - Team Schedule{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>온라인 회의</h2>
+    <p class="card-sub">참여자들과 채팅으로 회의하고, 끝나면 대화 내용을 자동으로 정리할 수 있습니다.</p>
+
+    <table>
+        <thead><tr><th>제목</th><th>개설자</th><th>참여자</th><th>상태</th><th>정리</th><th></th></tr></thead>
+        <tbody>
+        {% for m in meetings %}
+            <tr>
+                <td><a href="{{ url_for('meeting.room', meeting_id=m.id) }}">{{ m.title }}</a></td>
+                <td>{{ m.creator.name if m.creator else '-' }}</td>
+                <td>{{ m.participant_names() | join(', ') if m.messages else '-' }}</td>
+                <td>{{ '종료' if m.is_closed else '진행중' }}</td>
+                <td>{{ '완료' if m.summary else '-' }}</td>
+                <td><a href="{{ url_for('meeting.room', meeting_id=m.id) }}" class="btn btn-sm btn-secondary">입장</a></td>
+            </tr>
+        {% else %}
+            <tr><td colspan="6" class="empty">아직 만들어진 온라인 회의가 없습니다.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>새 온라인 회의 만들기</h2>
+    <form method="post" action="{{ url_for('meeting.create') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+            <label>회의 제목 <input type="text" name="title" placeholder="예: 9월 3주차 주간회의" required></label>
+        </div>
+        <button class="btn" type="submit">회의 만들고 입장</button>
+    </form>
+</div>
+{% endblock %}

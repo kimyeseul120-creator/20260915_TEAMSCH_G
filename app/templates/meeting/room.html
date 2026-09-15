@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}{{ meeting.title }} - 온라인 회의{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="cal-header">
+        <div>
+            <h2 style="margin:0;">{{ meeting.title }}</h2>
+            <p class="card-sub" style="margin:4px 0 0;">개설자 {{ meeting.creator.name if meeting.creator else '-' }} · {{ '종료됨' if meeting.is_closed else '진행중' }}</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+            {% if not meeting.is_closed %}
+            <form method="post" action="{{ url_for('meeting.close', meeting_id=meeting.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-secondary" type="submit">회의 종료</button>
+            </form>
+            {% endif %}
+            <form method="post" action="{{ url_for('meeting.summarize', meeting_id=meeting.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm" type="submit">{{ '다시 정리하기' if meeting.summary else '회의 내용 정리하기' }}</button>
+            </form>
+        </div>
+    </div>
+
+    <p class="card-sub" id="participant-line">참여자: {{ meeting.participant_names() | join(', ') if meeting.messages else '-' }}</p>
+
+    <div id="chat-box" style="height:340px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; padding:12px; background:#fff;">
+        {% for m in meeting.messages %}
+        <div class="chat-msg" data-id="{{ m.id }}">
+            <span class="chat-who">{{ m.user.name if m.user else '알수없음' }}</span>
+            <span class="chat-time">{{ m.created_at.strftime('%H:%M') }}</span>
+            <div class="chat-body">{{ m.content }}</div>
+        </div>
+        {% else %}
+        <p class="empty" id="chat-empty">아직 채팅이 없습니다. 첫 메시지를 보내보세요.</p>
+        {% endfor %}
+    </div>
+
+    {% if not meeting.is_closed %}
+    <form method="post" action="{{ url_for('meeting.send_message', meeting_id=meeting.id) }}" style="margin-top:12px; display:flex; gap:8px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="text" name="content" id="chat-input" placeholder="메시지를 입력하세요" autocomplete="off" required style="flex:1;">
+        <button class="btn" type="submit">전송</button>
+    </form>
+    {% else %}
+    <p class="empty" style="margin-top:12px;">종료된 회의라 더 이상 채팅을 보낼 수 없습니다.</p>
+    {% endif %}
+</div>
+
+{% if meeting.summary %}
+<div class="card">
+    <h2>회의 내용 정리</h2>
+    <p class="card-sub">{{ meeting.summarized_at.strftime('%Y-%m-%d %H:%M') }} 기준으로 자동 정리된 내용입니다.</p>
+    <div class="summary-box">
+        {% for line in summary_lines %}
+            <p class="sum-lv{{ line.level }}">{{ line.text }}</p>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const MEETING_ID = {{ meeting.id }};
+const IS_CLOSED_INITIAL = {{ 'true' if meeting.is_closed else 'false' }};
+let lastId = {{ meeting.messages[-1].id if meeting.messages else 0 }};
+
+function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+async function pollMessages() {
+    try {
+        const res = await fetch(`/api/meetings/${MEETING_ID}/messages?after_id=${lastId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.messages.length) {
+            const box = document.getElementById("chat-box");
+            const empty = document.getElementById("chat-empty");
+            if (empty) empty.remove();
+            data.messages.forEach(m => {
+                const div = document.createElement("div");
+                div.className = "chat-msg";
+                div.innerHTML = `<span class="chat-who">${escapeHtml(m.user_name)}</span>
+                    <span class="chat-time">${m.time}</span>
+                    <div class="chat-body">${escapeHtml(m.content)}</div>`;
+                box.appendChild(div);
+                lastId = m.id;
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+    } catch (e) { /* 네트워크 일시 오류는 조용히 무시하고 다음 폴링에서 재시도 */ }
+}
+
+const box = document.getElementById("chat-box");
+if (box) box.scrollTop = box.scrollHeight;
+
+if (!IS_CLOSED_INITIAL) {
+    setInterval(pollMessages, 3000);
+}
+</script>
+{% endblock %}
