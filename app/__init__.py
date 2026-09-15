@@ -31,16 +31,21 @@ def create_app(config_class=Config):
     app.register_blueprint(memo.bp)
     app.register_blueprint(meeting.bp)
 
-    @app.errorhandler(CSRFError)
-    def _handle_csrf_error(e):
+    @app.errorhandler(400)
+    def _handle_bad_request(e):
         """
-        같은 브라우저의 다른 탭에서 먼저 로그인/로그아웃하면, 보안 토큰이 새로
-        발급되면서 예전 화면(다른 탭)의 토큰은 더 이상 유효하지 않게 된다.
-        이 자체는 정상적인 보안 동작이지만, 사용자에게 딱딱한 "Bad Request" 화면
-        대신 로그인 화면으로 안내해 바로 다시 시도할 수 있게 한다.
+        여러 계정/탭이 같은 브라우저를 동시에 쓰거나, 페이지를 오래 열어둔 채로
+        요청을 보내면 보안 토큰(CSRF)이 이미 최신 값으로 바뀌어 있어 요청이
+        거부될 수 있다. 이는 CSRFProtect가 정상적으로 위조 요청을 막은 것이지만,
+        실제 사용자 입장에서는 그냥 "Bad Request" 흰 화면만 보이므로, 로그인
+        화면으로 안내해 다시 시도할 수 있게 한다 (계정 자체의 문제가 아님).
+        CSRF와 무관한 진짜 잘못된 요청은 원래 400 화면을 그대로 보여준다.
         """
-        flash("보안 정보가 만료되었습니다 (다른 탭에서 로그인/로그아웃했을 수 있습니다). 다시 시도해주세요.")
-        return redirect(url_for("auth.login"))
+        description = getattr(e, "description", "") or ""
+        if isinstance(e, CSRFError) or "CSRF" in description or "referrer" in description.lower():
+            flash("보안 정보가 만료되었습니다. 다시 시도해주세요.")
+            return redirect(url_for("auth.login"))
+        return e
 
     @app.after_request
     def _disable_caching_for_dynamic_pages(response):
