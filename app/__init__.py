@@ -1,6 +1,7 @@
 from datetime import timedelta
 
-from flask import Flask, request
+from flask import Flask, request, flash, redirect, url_for
+from flask_wtf.csrf import CSRFError
 
 from app.config import Config
 from app.extensions import db, csrf
@@ -29,6 +30,17 @@ def create_app(config_class=Config):
     app.register_blueprint(task.bp)
     app.register_blueprint(memo.bp)
     app.register_blueprint(meeting.bp)
+
+    @app.errorhandler(CSRFError)
+    def _handle_csrf_error(e):
+        """
+        같은 브라우저의 다른 탭에서 먼저 로그인/로그아웃하면, 보안 토큰이 새로
+        발급되면서 예전 화면(다른 탭)의 토큰은 더 이상 유효하지 않게 된다.
+        이 자체는 정상적인 보안 동작이지만, 사용자에게 딱딱한 "Bad Request" 화면
+        대신 로그인 화면으로 안내해 바로 다시 시도할 수 있게 한다.
+        """
+        flash("보안 정보가 만료되었습니다 (다른 탭에서 로그인/로그아웃했을 수 있습니다). 다시 시도해주세요.")
+        return redirect(url_for("auth.login"))
 
     @app.after_request
     def _disable_caching_for_dynamic_pages(response):
