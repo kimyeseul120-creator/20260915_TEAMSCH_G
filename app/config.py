@@ -1,6 +1,15 @@
 import os
 from pathlib import Path
 
+try:
+    # 로컬 실행 시 .env 파일의 값을 os.environ으로 자동으로 읽어온다.
+    # (Vercel 등 배포 환경에서는 대시보드에서 직접 환경변수를 설정하므로 이 파일이 없어도 무방)
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
