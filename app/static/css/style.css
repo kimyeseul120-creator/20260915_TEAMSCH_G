@@ -1,6 +1,6 @@
 /* Notion 스타일 참고: 순백 배경, 옅은 회색 경계선, 그림자 최소화, 절제된 색 사용 */
 :root {
-    --bg: #ffffff;
+    --bg: #f7f7f8;
     --panel: #ffffff;
     --border: #e9e9e7;
     --ink: #37352f;
